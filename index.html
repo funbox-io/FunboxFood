@@ -24,10 +24,10 @@
 
   <!-- KPIs (검사연보 통계) -->
   <div class="kpis">
-    <div class="kpi v-sky"><div class="label">연간 수입신고 건수</div><div class="value">874,928</div><div class="delta trend">전년 대비 +3.3%</div></div>
-    <div class="kpi v-mint"><div class="label">원산지 국가 수</div><div class="value">165</div><div class="delta">개국 (전년 164개국)</div></div>
-    <div class="kpi v-amber"><div class="label">수입 중량 / 금액</div><div class="value">1,933만t</div><div class="delta">366억 달러 · 역대 최대</div></div>
-    <div class="kpi v-coral"><div class="label">실시간 부적합 (세션)</div><div class="value" id="kpiFail">0</div><div class="delta">부적합률 <span id="kpiFailRate">0.0</span>%</div></div>
+    <div class="kpi v-sky"><div class="label">2025년 수입신고 건수</div><div class="value">874,928</div><div class="delta trend">전년 대비 +3.3%</div></div>
+    <div class="kpi v-mint"><div class="label">원산지 국가 수</div><div class="value">165</div><div class="delta">개국 · 2025년 기준</div></div>
+    <div class="kpi v-amber"><div class="label">수입 중량 / 금액</div><div class="value">1,933만t</div><div class="delta">366억 달러(+2.4%) 역대 최대 · 중량 −0.3%</div></div>
+    <div class="kpi v-coral"><div class="label">실시간 부적합 (세션)</div><div class="value" id="kpiFail">0</div><div class="delta">부적합률 <span id="kpiFailRate">0.0</span>% · 2025년 연간 1,420건(0.16%)</div></div>
   </div>
 
   <!-- controls -->
@@ -61,7 +61,7 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
       <div class="card">
-        <h2>수입 품목군별 실적 <span class="tag">품목군별 중량 비중</span></h2>
+        <h2>수입 품목군별 실적 <span class="tag">2025년 중량 비중 · 식약처 발표</span></h2>
         <div class="types" id="typesBox"></div>
       </div>
       <div class="card">
@@ -113,7 +113,7 @@
 
   <footer>
     <div>데이터 출처: <b style="color:var(--ink-dim)">식품의약품안전처 「수입식품 등 검사연보」 · 관세청 수출입무역통계</b> · 공식 조회: <a href="https://impfood.mfds.go.kr" target="_blank" rel="noopener">수입식품정보마루</a></div>
-    <div class="warn">⚠ 상단 KPI·원산지·품목군 통계는 공개 검사연보 기반 집계이며, 하단 실시간 표의 기업·구매자·통관 내역은 <b>가상의 데모 샘플</b>(실제 통관 기록 아님)입니다.</div>
+    <div class="warn">⚠ 상단 KPI·품목군·연간 표기는 식약처 2025년 수입식품 통계 발표 수치(언론 보도 대조 검증)이며, 실시간 표의 기업·구매자·통관 내역은 <b>가상의 데모 샘플</b>(실제 통관 기록 아님)입니다. 개별 국가 연간 비중은 미공표 항목으로 "—" 처리했습니다.</div>
   </footer>
 </div>
 

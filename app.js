@@ -43,7 +43,7 @@ function renderOrigins(){
       <td class="num" style="color:var(--ink-dim)">${rank+1}</td>
       <td><span class="flag">${o.f}</span>${o.c}${n?`<span class="co-badge">건 ${n}</span>`:""}</td>
       <td>${o.items.map(it=>`<span class="item-chip">${it}</span>`).join("")}</td>
-      <td class="num"><b style="color:var(--sky)">${share}%</b><div class="sub" style="margin-top:2px">연간 ${o.share}</div></td></tr>`;
+      <td class="num"><b style="color:var(--sky)">${share}%</b><div class="sub" style="margin-top:2px">연간: ${o.annual}</div></td></tr>`;
   }).join("");
 }
 function renderTypes(){
@@ -120,7 +120,7 @@ function renderDetail(country){
   const fails=stats.fail[country]||0;
   const share=((stats.cnt[country]||0)/stats.total*100).toFixed(1);
   $("dFlag").textContent=o.f; $("dName").textContent=country;
-  $("dStats").innerHTML=`수집 비중 <b>${share}%</b> · 연간 수입량 비중 <b>${o.share}</b> · 수집 레코드 <b>${recs.length}</b>건 · 부적합 <b>${fails}</b>건`;
+  $("dStats").innerHTML=`수집 비중 <b>${share}%</b> · 연간(2025): <b>${o.annual}</b> · 수집 레코드 <b>${recs.length}</b>건 · 부적합 <b>${fails}</b>건`;
   // 품목 집계
   const byItem={}; recs.forEach(d=>byItem[d.item]=(byItem[d.item]||0)+1);
   const items=Object.entries(byItem).sort((a,b)=>b[1]-a[1]);
