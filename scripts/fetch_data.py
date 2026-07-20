@@ -13,6 +13,11 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
+# Windows 콘솔(cp949) 대비 — 출력 인코딩을 UTF-8로 고정
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 KST = timezone(timedelta(hours=9))
 KEY = os.environ.get("MFDS_API_KEY", "").strip()
 BASE = os.environ.get("MFDS_API_URL", "").strip() or (
