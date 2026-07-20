@@ -4,27 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>수입식품 실시간 대시보드</title>
+  <meta name="description" content="관세청·식약처 수입식품정보 기반 실시간 통관 현황 대시보드 (데모)" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet (실제 지도) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     /* ── 디자인 시스템 토큰 (dataviz 검증 팔레트) ───────────── */
     :root {
-      --surface-1:  #ffffff;   /* 카드 표면 */
-      --page:       #f6f7f9;   /* 배경 평면 */
-      --ink:        #0b0b0b;   /* 기본 잉크 */
-      --ink-2:      #52514e;   /* 보조 잉크 */
-      --muted:      #898781;   /* 축/라벨 */
-      --grid:       #e1e0d9;   /* 헤어라인 */
-      /* sequential blue — 크기 비교용 */
+      --surface-1:  #ffffff;
+      --page:       #f5f6f8;
+      --ink:        #0b0b0b;
+      --ink-2:      #52514e;
+      --muted:      #898781;
+      --grid:       #e6e6e1;
+      --baseline:   #c3c2b7;
       --seq-100:    #cde2fb;
       --seq-250:    #86b6ef;
       --seq-450:    #2a78d6;
       --seq-600:    #184f95;
-      /* status — 상태 전용(고정) */
       --good:       #0ca30c;
       --warning:    #fab219;
       --critical:   #d03b3b;
       --info:       #2a78d6;
+      --brand-1:    #2a78d6;
+      --brand-2:    #184f95;
     }
+    body { font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
 
     @keyframes flashNew {
       0%   { background-color: #fef08a; }
@@ -32,53 +40,65 @@
       100% { background-color: transparent; }
     }
     .row-new { animation: flashNew 2.5s ease-out; }
-    .modal-backdrop { background: rgba(0,0,0,0.5); }
+    .modal-backdrop { background: rgba(15,23,42,0.55); }
 
-    /* 상태 배지 — 색 + 라벨(색 단독 금지) */
     .status-pass   { background:#dcfce7; color:#116611; }
     .status-review { background:#dbeafe; color:#1e40af; }
     .status-fail   { background:#fde2e2; color:#9a1f1f; }
 
-    /* 순위 막대 리스트 */
-    .bar-track {
-      background: var(--grid);
-      border-radius: 5px;
-      height: 10px;
-      overflow: hidden;
-    }
-    .bar-fill {
-      height: 100%;
-      border-radius: 5px;
-      background: var(--seq-450);
-      transition: width .4s ease;
-    }
-    .tab-btn { color: var(--ink-2); border-bottom: 2px solid transparent; }
+    .card { background: var(--surface-1); border: 1px solid var(--grid); border-radius: 14px; }
+
+    .bar-track { background: var(--grid); border-radius: 5px; height: 10px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 5px; background: var(--seq-450); transition: width .4s ease; }
+
+    .tab-btn { color: var(--ink-2); border-bottom: 2px solid transparent; white-space: nowrap; }
     .tab-btn.active { color: var(--seq-600); border-bottom-color: var(--seq-450); font-weight: 600; }
     .tabular { font-variant-numeric: tabular-nums; }
+
+    #map { height: 520px; border-radius: 10px; z-index: 0; }
+    .leaflet-popup-content { font-family: inherit; font-size: 13px; line-height: 1.5; }
   </style>
 </head>
 <body class="text-slate-800" style="background: var(--page)">
-  <header class="bg-white shadow-sm sticky top-0 z-10">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl font-bold">🍱 수입식품 실시간 대시보드</h1>
-      <div class="flex items-center gap-3 text-sm">
+  <!-- ── 헤더 ─────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-20 border-b bg-white/95 backdrop-blur" style="border-color:var(--grid)">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm"
+             style="background:linear-gradient(135deg,var(--brand-1),var(--brand-2))">🍱</div>
+        <div>
+          <h1 class="text-lg font-bold leading-tight">수입식품 실시간 대시보드</h1>
+          <p class="text-xs text-slate-500">관세청·식약처 수입식품정보 기반</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-sm flex-wrap">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style="background:#fef3c7;color:#92400e">● 데모 데이터</span>
         <span id="status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400"></span>
         <span id="status-text" class="text-slate-500">대기 중</span>
-        <span id="last-updated" class="text-slate-400"></span>
-        <button id="toggle-poll" class="px-3 py-1 rounded bg-slate-800 text-white">일시정지</button>
+        <span id="last-updated" class="text-slate-400 hidden sm:inline"></span>
+        <button id="toggle-poll"
+                class="px-3 py-1.5 rounded-lg text-white text-xs font-medium hover:opacity-90"
+                style="background:var(--brand-2)">일시정지</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-4 space-y-4">
-    <!-- KPI 요약 타일 -->
-    <section id="kpi-row" class="grid grid-cols-2 md:grid-cols-4 gap-3"></section>
+  <main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+    <!-- KPI 요약 -->
+    <section id="kpi-row" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></section>
 
-    <!-- 검색 -->
+    <!-- 필터 -->
     <div class="flex flex-wrap items-center gap-3">
-      <input id="search" type="text" placeholder="품목/수입자/제조사 검색…"
-             class="flex-1 min-w-[220px] border rounded px-3 py-2" />
-      <div class="text-sm text-slate-500">
+      <input id="search" type="text" placeholder="품목 · 수입자 · 제조사 · 지역 검색…"
+             class="flex-1 min-w-[220px] rounded-lg px-3 py-2 border" style="border-color:var(--grid)" />
+      <select id="date-filter" class="rounded-lg px-3 py-2 border text-sm bg-white" style="border-color:var(--grid)">
+        <option value="all">전체 기간</option>
+        <option value="today">오늘</option>
+        <option value="7d">최근 7일</option>
+        <option value="30d">최근 30일</option>
+      </select>
+      <div class="text-sm text-slate-500 whitespace-nowrap">
         표시 <span id="count-total" class="font-semibold tabular">0</span>건 ·
         신규 <span id="count-new" class="font-semibold text-amber-600 tabular">0</span>건
       </div>
@@ -88,8 +108,9 @@
     <div id="country-bar" class="flex flex-wrap gap-2"></div>
 
     <!-- 탭 -->
-    <nav id="tabs" class="flex gap-1 border-b" style="border-color: var(--grid)">
+    <nav id="tabs" class="flex gap-1 border-b overflow-x-auto" style="border-color:var(--grid)">
       <button class="tab-btn active px-4 py-2 text-sm" data-tab="all">전체 목록</button>
+      <button class="tab-btn px-4 py-2 text-sm" data-tab="map">지도</button>
       <button class="tab-btn px-4 py-2 text-sm" data-tab="country">국가별</button>
       <button class="tab-btn px-4 py-2 text-sm" data-tab="item">수입식품</button>
       <button class="tab-btn px-4 py-2 text-sm" data-tab="buyer">수입자·지역</button>
@@ -97,29 +118,39 @@
     </nav>
 
     <!-- 패널: 전체 목록 -->
-    <section id="panel-all" class="overflow-x-auto bg-white rounded-lg shadow-sm">
+    <section id="panel-all" class="card overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="bg-slate-100 text-slate-600 text-left">
+        <thead class="text-slate-500 text-left" style="background:#fafafa">
           <tr>
-            <th class="px-3 py-2">날짜</th>
-            <th class="px-3 py-2">수입국 / 반입항</th>
-            <th class="px-3 py-2">품목</th>
-            <th class="px-3 py-2">수입자 / 지역</th>
-            <th class="px-3 py-2">상태</th>
+            <th class="px-3 py-2.5 font-medium">신고일</th>
+            <th class="px-3 py-2.5 font-medium">수입국 / 반입항</th>
+            <th class="px-3 py-2.5 font-medium">품목</th>
+            <th class="px-3 py-2.5 font-medium">수입자 / 지역·세관</th>
+            <th class="px-3 py-2.5 font-medium">상태</th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
       </table>
     </section>
 
+    <!-- 패널: 지도 -->
+    <section id="panel-map" class="hidden card p-3">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-2 px-1">
+        <h2 class="text-sm font-semibold text-slate-500">지역별 통관 분포 (관할 세관·반입항 위치)</h2>
+        <div class="text-xs text-slate-400">마커 크기 = 건수 · <span style="color:var(--critical)">빨강</span> = 부적합 포함</div>
+      </div>
+      <div id="map"></div>
+      <div id="map-note" class="text-xs text-slate-400 mt-2 px-1"></div>
+    </section>
+
     <!-- 패널: 국가별 -->
-    <section id="panel-country" class="hidden bg-white rounded-lg shadow-sm p-4">
+    <section id="panel-country" class="hidden card p-4">
       <h2 class="text-sm font-semibold text-slate-500 mb-3">수입국별 신고 건수</h2>
       <div id="list-country" class="space-y-2.5"></div>
     </section>
 
     <!-- 패널: 수입식품 -->
-    <section id="panel-item" class="hidden bg-white rounded-lg shadow-sm p-4">
+    <section id="panel-item" class="hidden card p-4">
       <h2 class="text-sm font-semibold text-slate-500 mb-3">품목별 수입 건수</h2>
       <div id="list-item" class="space-y-2.5"></div>
     </section>
@@ -127,11 +158,11 @@
     <!-- 패널: 수입자·지역 -->
     <section id="panel-buyer" class="hidden">
       <div class="grid md:grid-cols-2 gap-4">
-        <div class="bg-white rounded-lg shadow-sm p-4">
+        <div class="card p-4">
           <h2 class="text-sm font-semibold text-slate-500 mb-3">지역별 수입 건수</h2>
           <div id="list-region" class="space-y-2.5"></div>
         </div>
-        <div class="bg-white rounded-lg shadow-sm p-4">
+        <div class="card p-4">
           <h2 class="text-sm font-semibold text-slate-500 mb-3">수입자(기업·개인)별 건수</h2>
           <div id="list-buyer" class="space-y-2.5"></div>
         </div>
@@ -139,20 +170,29 @@
     </section>
 
     <!-- 패널: 시간대별 추이 -->
-    <section id="panel-trend" class="hidden bg-white rounded-lg shadow-sm p-4">
+    <section id="panel-trend" class="hidden card p-4">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h2 class="text-sm font-semibold text-slate-500">폴링 시점별 수신 추이</h2>
         <div id="trend-legend" class="flex gap-4 text-xs"></div>
       </div>
       <div id="trend-chart" class="relative"></div>
     </section>
+
+    <!-- 데이터 출처 / 고지 -->
+    <footer class="text-xs text-slate-400 border-t pt-4 pb-8 space-y-1" style="border-color:var(--grid)">
+      <p>데이터 출처: <span class="font-medium text-slate-500" id="data-source">관세청·식약처</span> · 지도 © OpenStreetMap 기여자</p>
+      <p id="data-range">데이터 기준: —</p>
+      <p class="text-amber-600">⚠ 본 화면의 기업·개인 및 통관 내역은 <b>가상의 데모 샘플</b>이며 실제 통관 기록이 아닙니다.
+        실 데이터 연동은 data.go.kr API 키 설정이 필요합니다.</p>
+    </footer>
   </main>
 
-  <div id="modal" class="fixed inset-0 hidden items-center justify-center modal-backdrop z-20">
-    <div class="bg-white rounded-lg max-w-lg w-full mx-4 p-5">
+  <!-- 상세 모달 -->
+  <div id="modal" class="fixed inset-0 hidden items-center justify-center modal-backdrop z-30">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-5 shadow-xl">
       <div class="flex justify-between items-start mb-3">
         <h2 class="text-lg font-bold" id="modal-title">상세 정보</h2>
-        <button id="modal-close" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+        <button id="modal-close" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
       </div>
       <div id="modal-body" class="space-y-2 text-sm"></div>
     </div>

@@ -59,7 +59,7 @@ UI.init({
 });
 
 // URL 해시로 탭 딥링크 (#country / #item / #buyer)
-if (["country", "item", "buyer", "trend"].includes(location.hash.slice(1)))
+if (["map", "country", "item", "buyer", "trend"].includes(location.hash.slice(1)))
   UI.switchTab(location.hash.slice(1));
 
 startPolling();

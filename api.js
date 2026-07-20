@@ -2,13 +2,19 @@
 // 설정 — 실제 배포 전 반드시 확인/교체하세요
 // ==========================================================
 export const CONFIG = {
-  // true 이면 실제 API 호출 없이 목업 데이터로 동작 (테스트용)
+  // true 이면 실제 API 호출 없이 데모 데이터로 동작.
+  //   ⚠ 현재 화면의 기업/개인/통관 내역은 모두 가상의 데모 샘플이며 실제 통관 기록이 아닙니다.
   USE_MOCK: true,
 
-  // data.go.kr 에서 발급받은 서비스 키
+  // 데이터 출처 표기 (화면 하단/헤더에 노출)
+  DATA_SOURCE: "관세청·식품의약품안전처 수입식품정보 (data.go.kr)",
+
+  // data.go.kr 에서 발급받은 서비스 키 (실 데이터 연동 시 입력)
+  //   ⚠ 공개 저장소에 키를 커밋하지 마세요. 배포 시 본인 프록시/서버 환경변수로 주입 권장.
   SERVICE_KEY: "YOUR_SERVICE_KEY_HERE",
 
   // 실제 오픈 API 엔드포인트 (관세청/식약처 문서에서 확인 후 교체)
+  //   예) 식약처 수입식품 정보:  https://apis.data.go.kr/1471000/...
   //   ⚠ 아래 URL과 파라미터 이름은 예시입니다.
   API_BASE: "https://apis.data.go.kr/OPEN_API_PATH",
 
@@ -24,6 +30,20 @@ export const FLAGS = {
   "중국": "🇨🇳", "미국": "🇺🇸", "일본": "🇯🇵", "베트남": "🇻🇳",
   "태국": "🇹🇭", "이탈리아": "🇮🇹", "프랑스": "🇫🇷", "호주": "🇦🇺",
   "독일": "🇩🇪", "스페인": "🇪🇸", "기타": "🏳️",
+};
+
+// 지역 → 지리정보(위경도) + 관할 세관 + 대표 반입항 + 주소.
+// 세관/항만은 실제 공개 정보 기반이며, 지도(Leaflet)의 마커 위치로 사용됩니다.
+export const REGION_GEO = {
+  "서울": { lat: 37.5665, lng: 126.9780, customs: "서울본부세관", port: "인천항(관할)",   addr: "서울특별시 강남구 언주로 721" },
+  "인천": { lat: 37.4563, lng: 126.7052, customs: "인천본부세관", port: "인천항·인천공항", addr: "인천광역시 중구 서해대로 339" },
+  "경기": { lat: 36.9905, lng: 126.8227, customs: "평택직할세관", port: "평택항",         addr: "경기도 평택시 포승읍 평택항만길" },
+  "부산": { lat: 35.1028, lng: 129.0403, customs: "부산본부세관", port: "부산항",         addr: "부산광역시 중구 충장대로 20" },
+  "충남": { lat: 36.5184, lng: 126.8000, customs: "대전세관",     port: "대산항",         addr: "대전광역시 대덕구 문평동" },
+  "경남": { lat: 35.2280, lng: 128.6811, customs: "창원세관",     port: "김해공항",       addr: "경상남도 창원시 성산구" },
+  "전남": { lat: 34.9407, lng: 127.6959, customs: "광양세관",     port: "광양항",         addr: "전라남도 광양시 항만대로" },
+  "대구": { lat: 35.8714, lng: 128.6014, customs: "대구본부세관", port: "대구공항",       addr: "대구광역시 동구 첨단로" },
+  "제주": { lat: 33.4996, lng: 126.5312, customs: "제주세관",     port: "제주항",         addr: "제주특별자치도 제주시 임항로" },
 };
 
 // ----------------------------------------------------------
@@ -103,6 +123,14 @@ const IMPORTERS = [
 
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
+// 최근 N일 이내의 임의 신고일(YYYY-MM-DD) — 최근 쪽으로 편향
+function recentDate() {
+  const daysAgo = Math.floor(Math.random() ** 2 * 30); // 0~29일, 오늘 쪽 편향
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
 let mockSeq = 1000;
 function mockFetch() {
   const countries = Object.keys(FLAGS).filter(c => c !== "기타");
@@ -122,7 +150,7 @@ function mockFetch() {
     const imp = pick(IMPORTERS);
     out.push({
       id: String(mockSeq++),
-      date: new Date().toISOString().slice(0, 10),
+      date: recentDate(),
       country: pick(countries),
       port: pick(ports),
       category: cat,
